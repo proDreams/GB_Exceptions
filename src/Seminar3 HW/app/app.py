@@ -1,10 +1,11 @@
-from app.exceptions import WrongLenException, WrongDataFormatException
+from app.exceptions import WrongLenException, WrongDataFormatException, ReadOnlyException
 from app.parse_name import ParseName
 
 
 class CreateFile:
     def __init__(self):
-        self.text = input("""Введите строку содержащую следующие данные в указанном формате:
+        self.text = input("""
+Введите строку содержащую следующие данные в указанном формате:
 Фамилия - одно слово
 Имя - одно слово
 Отчество - одно слово
@@ -33,29 +34,38 @@ class CreateFile:
         return True
 
     def pop_dob(self):
-        for i in range(6):
+        for i in range(len(self.text)):
             if "." in self.text[i]:
-                temp = [int(j) for j in self.text[i].split(".")]
+                try:
+                    temp = [int(j) for j in self.text[i].split(".")]
+                except ValueError:
+                    raise WrongDataFormatException(3, self.text[i])
                 if 0 < temp[0] <= 31 and 0 < temp[1] <= 12 and 1930 <= temp[2] <= 2023:
                     return self.text.pop(i)
-                raise WrongDataFormatException(self.text[i], 3)
+                raise WrongDataFormatException(3, self.text[i])
 
     def pop_phone(self):
-        for i in range(6):
+        for i in range(len(self.text)):
             if "+" in self.text[i]:
-                raise WrongDataFormatException(self.text[i], 1)
+                raise WrongDataFormatException(1, self.text[i])
             elif self.text[i].isdigit():
-                if len(self.text[i]) == 10:
+                if len(self.text[i]) == 10 or (len(self.text[i]) == 11 and self.text[i][0] == "8"):
                     return self.text.pop(i)
-                raise WrongDataFormatException(self.text[i], 1)
+                raise WrongDataFormatException(1, self.text[i])
+        else:
+            raise WrongDataFormatException(4)
 
     def pop_sex(self):
-        for i in range(6):
+        for i in range(len(self.text)):
             if len(self.text[i]) == 1:
                 if self.text[i] == "f" or self.text[i] == "m":
                     return self.text.pop(i)
-                raise WrongDataFormatException(self.text[i], 2)
+                raise WrongDataFormatException(2, self.text[i])
 
     def create_file(self):
-        with open(f"{self.last_name}.txt", "a", encoding="utf-8") as f:
-            f.write(f"<{self.last_name}><{self.first_name}><{self.patronymic}><{self.dob}><{self.phone}><{self.sex}>\n")
+        try:
+            with open(f"{self.last_name}.txt", "a", encoding="utf-8") as f:
+                f.write(f"<{self.last_name}><{self.first_name}><{self.patronymic}><{self.dob}><{self.phone}><{self.sex}>\n")
+            print(f"Создан файл {self.last_name}")
+        except PermissionError:
+            raise ReadOnlyException(f"{self.last_name}.txt")
